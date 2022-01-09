@@ -246,11 +246,12 @@ void whiteClockLoop() {
     return;
   } else if (isNewTurn && (currentGame.incrementType == DELAY)) {
     whitesTurnInitMillis = millis();
+    whitesEllapsedTimeMillis = millis();
   }
 
   whitesTimeMillis = whitesTimeMillis - (millis() - whitesEllapsedTimeMillis );
+  unsigned long whitesTime = whitesTimeMillis / 1000;
   whitesEllapsedTimeMillis = millis();
-  int whitesTime = whitesTimeMillis / 1000;
   if (whitesTime > 0 ) {
     if (whitesOldTimeMillis / 1000 != whitesTime || isNewTurn) {
       if (isNewTurn) {
@@ -671,7 +672,6 @@ uint16_t readUiSelection() {
           blacksTimeMillis -=   (currentGame.incrementSeconds * 1000 - timeExpendedMillis) ;
         }
       }
-
       whitesTurnInitMillis = millis();
       whitesEllapsedTimeMillis = millis();
       isNewTurn = true;
