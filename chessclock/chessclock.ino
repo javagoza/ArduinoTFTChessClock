@@ -110,14 +110,10 @@ States state = IDLE;
 
 enum IncrementType { DELAY = 0, // Delay the playeer's clock starts after the delay period
                      BRONSTEIN, // Players receive the used portion of the increment at the end of each turn
-                     FISCHER     // {layers receive the full increment at the end of each turn, with increment 0 is BLIZT or GUILLOTINE
+                     FISCHER    // Players receive the full increment at the end of each turn, with increment 0 is BLIZT or GUILLOTINE
                    };
 
-#define HOUR_GLASS 0
-#define US_DELAY 1
-#define BRONSTEIN 2
-#define FISCHER 3
-static const char * const clockModeNames[4] PROGMEM = {"HOUR GLASS", "US DELAY", "BRONSTEIN", "FISCHER"};
+
 
 IncrementType incrementType = FISCHER;
 uint16_t incrementSeconds = 0;
@@ -145,17 +141,17 @@ static const GameType games[24]  PROGMEM = {
   { FISCHER, 0, 1, {{ 180, 0}, {0, 0}, {0, 0}}},
   { FISCHER, 0, 1, {{ 300, 0}, {0, 0}, {0, 0}}},
   { FISCHER, 0, 1, {{ 600, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 5, 1, {{1500, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 5, 1, {{3600, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 5, 1, {{7200, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { DELAY, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { DELAY, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { DELAY, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { DELAY, 5, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { FISCHER, 2, 1, {{1500, 0}, {0, 0}, {0, 0}}},
+  { FISCHER, 2, 1, {{3600, 0}, {0, 0}, {0, 0}}},
+  { FISCHER, 2, 1, {{7200, 0}, {0, 0}, {0, 0}}},
+  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
+  { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
   { FISCHER, 0, 2, {{7200, 40}, {1800, 0}, {0, 0}}},
   { FISCHER, 0, 2, {{7200, 40}, {3600, 0}, {0, 0}}},
   { FISCHER, 0, 3, {{7200, 40}, {3600, 20}, {1800, 0}}},
@@ -183,6 +179,11 @@ unsigned long whitesTimeMillis = 0; // Blacks time left
 unsigned long blacksOldTimeMillis = 0; // used to decide if clock needs refresh
 unsigned long whitesOldTimeMillis = 0; // used to decide if clock needs refresh
 
+unsigned long whitesTurnInitMillis = millis();
+unsigned long blacksTurnInitMillis = millis();
+unsigned long whitesEllapsedTimeMillis = millis();
+unsigned long blacksEllapsedTimeMillis = millis();
+
 bool isNewTurn; // new player turn change
 
 bool isWhiteDown = false; // White's clock is the one at the bottom of the screen
@@ -204,7 +205,7 @@ uint16_t alertColor = RED;
 
 // Clock displays
 TFTSevenSegmentClockDisplay clockDisplayMinutes(&tft, 30, 220, 35, 70, WHITE, backgroundColor, 8, false, .75); // Short games
-TFTSevenSegmentClockDisplay clockDisplayHours(&tft, 10, 230, 26, 60, WHITE, backgroundColor, 6, true, .75); // Long games
+TFTSevenSegmentClockDisplay clockDisplayHours(&tft, 10, 220, 26, 60, WHITE, backgroundColor, 6, true, .75); // Long games
 
 // Moves counter display
 TFTSevenSegmentDecimalDisplay movesDisplay(&tft, 180, 290, 5, 8, foregroundColor, backgroundColor, 1);
@@ -213,8 +214,6 @@ TFTSevenSegmentDecimalDisplay movesDisplay(&tft, 180, 290, 5, 8, foregroundColor
 TFTSevenSegmentClockDisplay clockDisplay = clockDisplayMinutes ;
 
 
-unsigned long whitesTurnInitMillis = millis();
-unsigned long blacksTurnInitMillis = millis();
 
 
 void setup(void) {
@@ -239,12 +238,8 @@ void whiteClockLoop() {
     whitesTurnInitMillis = millis();
   }
 
-  if (isNewTurn && (currentGame.incrementType == BRONSTEIN)) {
-    whitesTimeMillis += currentGame.incrementSeconds * 1000;
-  }
-
-  whitesTimeMillis = whitesTimeMillis - (millis() - whitesTurnInitMillis );
-  whitesTurnInitMillis = millis();
+  whitesTimeMillis = whitesTimeMillis - (millis() - whitesEllapsedTimeMillis );
+  whitesEllapsedTimeMillis = millis();
   int whitesTime = whitesTimeMillis / 1000;
   if (whitesTime > 0 ) {
     if (whitesOldTimeMillis / 1000 != whitesTime || isNewTurn) {
@@ -272,18 +267,14 @@ void blackClockLoop() {
     return;
   } else if (isNewTurn && (currentGame.incrementType == DELAY)) {
     blacksTurnInitMillis = millis();
+    blacksEllapsedTimeMillis = millis();
   }
 
-  if (isNewTurn && (currentGame.incrementType == BRONSTEIN)) {
-    blacksTimeMillis += currentGame.incrementSeconds * 1000;
-  }
-
-  blacksTimeMillis = blacksTimeMillis - (millis() - blacksTurnInitMillis );
-  int blacksTime = blacksTimeMillis / 1000;
-  blacksTurnInitMillis = millis();
+  blacksTimeMillis = blacksTimeMillis - (millis() - blacksEllapsedTimeMillis );
+  unsigned long blacksTime = blacksTimeMillis / 1000;
+  blacksEllapsedTimeMillis = millis();
   if (blacksTime > 0  ) {
     if ( blacksOldTimeMillis / 1000 != blacksTime || isNewTurn) {
-      //Serial.print("blacksTimeMillis "); Serial.print(blacksTimeMillis); Serial.print(" millis "); Serial.print( millis()); Serial.print(" blacksTurnInitMillis "); Serial.print(blacksTurnInitMillis); Serial.print(" blacksOldTimeMillis ") ;Serial.println(blacksOldTimeMillis);
       if (isNewTurn) {
         printTime(whitesTimeMillis, whitesRotation, whitesmoves, false);
       }
@@ -328,18 +319,21 @@ void resetGame(void) {
 
   isNewTurn = false;
 
-  whitesTimeMillis = currentGame.stages[0].duration * 1000;
+  whitesTimeMillis = currentGame.stages[0].duration * 1000 + 999;
   whitesOldTimeMillis = whitesTimeMillis;
   whitesTurnInitMillis = millis();
+  whitesEllapsedTimeMillis = millis();
 
-  blacksTimeMillis = currentGame.stages[0].duration * 1000;
+
+  blacksTimeMillis = currentGame.stages[0].duration * 1000 + 999;
   blacksOldTimeMillis = blacksTimeMillis;
   blacksTurnInitMillis = millis();
+  blacksEllapsedTimeMillis = millis();
 
   clockDisplay.setOffColor(backgroundColor);
   printTime(whitesTimeMillis, whitesRotation, 0, false);
   printTime(blacksTimeMillis, blacksRotation, 0, false);
-  printClockMode(BLACK);
+  printClockMode(foregroundColor);
   paintResetSettingsIcons(foregroundColor);
 
 
@@ -350,15 +344,19 @@ void printClockMode(uint16_t color) {
   printClockMode(blacksRotation, color);
 }
 
+void printStages(int16_t x, int16_t y, uint16_t color){
+  tft.setCursor(x, y);
+  tft.print("STG");
+  for (int k = 0; k < currentGame.stagesNumber; k++) {
+    printStageData(currentGame, x+20 + k * 60 ,y, k, color);
+  }
+}
+
 void printClockMode(uint16_t rotation, uint16_t color) {
   tft.setRotation(rotation);
-  printClockModeName(currentGame, 16, tft.height() - PLAYER_CLOCK_HEIGHT + 7, color);
-  printClockDelay(currentGame, 80, tft.height() - PLAYER_CLOCK_HEIGHT + 7 , color);
-  tft.setCursor(16, tft.height() - PLAYER_CLOCK_HEIGHT + 17);
-  tft.print("STAGES");
-  for (int k = 0; k < currentGame.stagesNumber; k++) {
-    printStageData(currentGame, 60 + k * 60 , tft.height() - PLAYER_CLOCK_HEIGHT + 17, k, BLACK);
-  }
+  printClockModeName(currentGame, 16, tft.height() - PLAYER_CLOCK_HEIGHT + 8, color);
+  printClockDelay(currentGame, 80, tft.height() - PLAYER_CLOCK_HEIGHT + 8 , color);
+  printStages(16, tft.height() - 27, color);
   tft.setRotation(INITIAL_ROTATION);
 }
 
@@ -376,7 +374,7 @@ void printClockModeName (GameType game, int16_t x, int16_t y, uint16_t color) {
     tft.print(F("BRONSTEIN") );
   } else if (game.incrementType == FISCHER) {
     if (game.incrementSeconds == 0) {
-      tft.print(F("HOUR GLSS") );
+      tft.print(F("NO INC") );
     } else {
       tft.print(F("FISCHER") );
     }
@@ -599,13 +597,13 @@ uint16_t readUiSelection(const int16_t lastSelected ) {
         return state;
       } else if (state == BLACK_IN_PAUSE) {
         state = BLACK_PLAYING;
-        blacksTurnInitMillis = millis();
+        blacksEllapsedTimeMillis = millis();
         paintPauseIcon(foregroundColor);
         paintResetSettingsIcons(backgroundColor);
         return state;
       } else if (state == WHITE_IN_PAUSE ) {
         state = WHITE_PLAYING;
-        whitesTurnInitMillis = millis();
+        whitesEllapsedTimeMillis = millis();
         paintPauseIcon(foregroundColor);
         paintResetSettingsIcons(backgroundColor);
         return state;
@@ -613,6 +611,10 @@ uint16_t readUiSelection(const int16_t lastSelected ) {
     }
 
     if (state == IDLE) {
+      printClockMode(BLACK);
+      if (currentGame.incrementType == FISCHER || currentGame.incrementType == BRONSTEIN) {
+        whitesTimeMillis += (currentGame.incrementSeconds * 1000);
+      }
       state = WHITE_PLAYING;
       // assign white color
       if (ypos > PLAYER_CLOCK_HEIGHT) {
@@ -631,48 +633,50 @@ uint16_t readUiSelection(const int16_t lastSelected ) {
       isNewTurn = true;
 
       whitesTurnInitMillis = millis();
+      whitesEllapsedTimeMillis = millis();
       return state;
     }
 
     if ((state == WHITE_PLAYING) &&
         (((ypos > PLAYER_CLOCK_HEIGHT) && !isWhiteDown )
          || (ypos < PLAYER_CLOCK_HEIGHT) && isWhiteDown )) {
-      Serial.print(" WHITE PLAYING");
-      if (state == WHITE_PLAYING) {
-        if (currentGame.incrementType == BRONSTEIN) {
-          int changeTimeMillis = millis();
-          if ( (changeTimeMillis - blacksTurnInitMillis) < currentGame.incrementSeconds * 1000 ) {
-            blacksTimeMillis -= currentGame.incrementSeconds * 1000 - (changeTimeMillis - blacksTurnInitMillis);
-          }
-        }
 
-
-        ++whitesmoves;
-        if (currentGame.incrementType == FISCHER) {
-          whitesTimeMillis += (currentGame.incrementSeconds * 1000);
+      ++whitesmoves;
+      if (currentGame.incrementType == BRONSTEIN) {
+        unsigned long changeTimeMillis = millis();
+        unsigned long timeExpendedMillis = changeTimeMillis - whitesTurnInitMillis;
+        if ( timeExpendedMillis < currentGame.incrementSeconds * 1000 ) {
+          whitesTimeMillis -= (currentGame.incrementSeconds * 1000 - timeExpendedMillis) ;
         }
       }
-      state = BLACK_PLAYING;
 
+      state = BLACK_PLAYING;
+      if (currentGame.incrementType == FISCHER || currentGame.incrementType == BRONSTEIN) {
+        blacksTimeMillis += (currentGame.incrementSeconds * 1000);
+      }
       blacksTurnInitMillis = millis();
+      blacksEllapsedTimeMillis = millis();
       isNewTurn = true;
 
     } else if ((state == BLACK_PLAYING) &&
                (((ypos > PLAYER_CLOCK_HEIGHT) && isWhiteDown )
                 || (ypos < PLAYER_CLOCK_HEIGHT) && !isWhiteDown )) {
-      Serial.print(" BLACK PLAYING");
+
+      state = WHITE_PLAYING;
+      if (currentGame.incrementType == FISCHER || currentGame.incrementType == BRONSTEIN) {
+        whitesTimeMillis += (currentGame.incrementSeconds * 1000);
+      }
+      ++blacksmoves;
       if (currentGame.incrementType == BRONSTEIN) {
-        int changeTimeMillis = millis();
-        if ( (changeTimeMillis - whitesTurnInitMillis) < currentGame.incrementSeconds * 1000 ) {
-          whitesTimeMillis -= currentGame.incrementSeconds * 1000 - (changeTimeMillis - whitesTurnInitMillis);
+        unsigned long changeTimeMillis = millis();
+        unsigned long timeExpendedMillis = changeTimeMillis - blacksTurnInitMillis;
+        if ( timeExpendedMillis < currentGame.incrementSeconds * 1000 ) {
+          blacksTimeMillis -=   (currentGame.incrementSeconds * 1000 - timeExpendedMillis) ;
         }
       }
-      state = WHITE_PLAYING;
-      ++blacksmoves;
-      if (currentGame.incrementType == FISCHER) {
-        blacksTimeMillis += (currentGame.incrementSeconds * 1000);
-      }
+      
       whitesTurnInitMillis = millis();
+      whitesEllapsedTimeMillis = millis();
       isNewTurn = true;
 
     }
