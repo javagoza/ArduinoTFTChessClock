@@ -32,3 +32,6 @@
 *.app
 chessclock/wireframe/*.*
 chessclock/media/*.*
+chessclock/media/lcd-image-converter-20161012 (1)/lcd-image-converter/font.tmpl
+chessclock/media/lcd-image-converter-20161012 (1)/lcd-image-converter/image.tmpl
+chessclock/media/lcd-image-converter-20161012 (1)/lcd-image-converter/readme.md
