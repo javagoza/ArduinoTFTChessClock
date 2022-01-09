@@ -567,14 +567,26 @@ uint16_t readUiSelection() {
 
     // are we in buttons area ?
     if ( ypos > PLAYER_CLOCK_HEIGHT && ypos < tft.height() - PLAYER_CLOCK_HEIGHT ) {
-      if (state == IDLE) {
-        if ( xpos <  tft.height() / 2  ) {
+      if (state == IDLE || (state == BLACK_IN_PAUSE || state == WHITE_IN_PAUSE) && (ypos >  tft.height() / 2 - 32) && (ypos <  tft.height() / 2 + 32)) {
+        if ( xpos <  tft.width() / 3  ) {
           state = SETTINGS;
           showSettings();
           return state;
-        } else {
+        } else if ( xpos > 2 * tft.width() / 3  ) {
           state = IDLE;
           resetGame();
+          return state;
+        } else if (state == BLACK_IN_PAUSE) {
+          state = BLACK_PLAYING;
+          blacksEllapsedTimeMillis = millis();
+          paintPauseIcon(foregroundColor);
+          paintResetSettingsIcons(backgroundColor);
+          return state;
+        } else if (state == WHITE_IN_PAUSE ) {
+          state = WHITE_PLAYING;
+          whitesEllapsedTimeMillis = millis();
+          paintPauseIcon(foregroundColor);
+          paintResetSettingsIcons(backgroundColor);
           return state;
         }
       } else if (state == BLACK_PLAYING) {
@@ -591,18 +603,6 @@ uint16_t readUiSelection() {
         printPauseTime(blacksTimeMillis, blacksRotation, blacksmoves);
         paintPauseIcon(alertColor);
         paintResetSettingsIcons(alertColor);
-        return state;
-      } else if (state == BLACK_IN_PAUSE) {
-        state = BLACK_PLAYING;
-        blacksEllapsedTimeMillis = millis();
-        paintPauseIcon(foregroundColor);
-        paintResetSettingsIcons(backgroundColor);
-        return state;
-      } else if (state == WHITE_IN_PAUSE ) {
-        state = WHITE_PLAYING;
-        whitesEllapsedTimeMillis = millis();
-        paintPauseIcon(foregroundColor);
-        paintResetSettingsIcons(backgroundColor);
         return state;
       }
     }
