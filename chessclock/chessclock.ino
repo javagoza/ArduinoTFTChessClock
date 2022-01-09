@@ -34,7 +34,7 @@
 #include "TFTSevenSegmentDecimalDisplay.h"
 #include "TFTPROGMEMData.h"
 
-#define PLAYER_CLOCK_HEIGHT 120
+#define PLAYER_CLOCK_HEIGHT 130
 #define MENU_COMMANDS_HEIGHT 48
 #define INITIAL_ROTATION 0
 #define countof(a) (sizeof(a) / sizeof(a[0]))
@@ -112,6 +112,12 @@ enum IncrementType { DELAY = 0, // Delay the playeer's clock starts after the de
                      BRONSTEIN, // Players receive the used portion of the increment at the end of each turn
                      FISCHER     // {layers receive the full increment at the end of each turn, with increment 0 is BLIZT or GUILLOTINE
                    };
+
+#define HOUR_GLASS 0
+#define US_DELAY 1
+#define BRONSTEIN 2
+#define FISCHER 3
+static const char * const clockModeNames[4] PROGMEM = {"HOUR GLASS", "US DELAY", "BRONSTEIN", "FISCHER"};
 
 IncrementType incrementType = FISCHER;
 uint16_t incrementSeconds = 0;
@@ -198,7 +204,7 @@ uint16_t alertColor = RED;
 
 // Clock displays
 TFTSevenSegmentClockDisplay clockDisplayMinutes(&tft, 30, 220, 35, 70, WHITE, backgroundColor, 8, false, .75); // Short games
-TFTSevenSegmentClockDisplay clockDisplayHours(&tft, 10, 220, 26, 60, WHITE, backgroundColor, 8, true, .75); // Long games
+TFTSevenSegmentClockDisplay clockDisplayHours(&tft, 10, 230, 26, 60, WHITE, backgroundColor, 6, true, .75); // Long games
 
 // Moves counter display
 TFTSevenSegmentDecimalDisplay movesDisplay(&tft, 180, 290, 5, 8, foregroundColor, backgroundColor, 1);
@@ -214,16 +220,29 @@ unsigned long blacksTurnInitMillis = millis();
 void setup(void) {
   Serial.begin(9600);
   tft.reset();
-
   uint16_t identifier = tft.readID();
-
   tft.begin(identifier);
   resetGame();
-
 }
 
 
 void whiteClockLoop() {
+  if (isNewTurn && (currentGame.incrementType == DELAY)
+      && ((millis() - whitesTurnInitMillis) < currentGame.incrementSeconds * 1000 )) {
+    if ((millis() - whitesTurnInitMillis) / 1000 % 10 == 0) {
+      printTime(whitesTimeMillis, whitesRotation, whitesmoves, true);
+      printTime(blacksTimeMillis, blacksRotation, blacksmoves, false);
+    }
+    // wait delay
+    return;
+  } else if (isNewTurn && (currentGame.incrementType == DELAY)) {
+    whitesTurnInitMillis = millis();
+  }
+
+  if (isNewTurn && (currentGame.incrementType == BRONSTEIN)) {
+    whitesTimeMillis += currentGame.incrementSeconds * 1000;
+  }
+
   whitesTimeMillis = whitesTimeMillis - (millis() - whitesTurnInitMillis );
   whitesTurnInitMillis = millis();
   int whitesTime = whitesTimeMillis / 1000;
@@ -243,6 +262,22 @@ void whiteClockLoop() {
 }
 
 void blackClockLoop() {
+  if (isNewTurn && (currentGame.incrementType == DELAY)
+      && ((millis() - blacksTurnInitMillis) < currentGame.incrementSeconds * 1000 )) {
+    // wait delay
+    if ((millis() - blacksTurnInitMillis) / 1000 % 10 == 0) {
+      printTime(whitesTimeMillis, whitesRotation, whitesmoves, false);
+      printTime(blacksTimeMillis, blacksRotation, blacksmoves, true);
+    }
+    return;
+  } else if (isNewTurn && (currentGame.incrementType == DELAY)) {
+    blacksTurnInitMillis = millis();
+  }
+
+  if (isNewTurn && (currentGame.incrementType == BRONSTEIN)) {
+    blacksTimeMillis += currentGame.incrementSeconds * 1000;
+  }
+
   blacksTimeMillis = blacksTimeMillis - (millis() - blacksTurnInitMillis );
   int blacksTime = blacksTimeMillis / 1000;
   blacksTurnInitMillis = millis();
@@ -278,9 +313,9 @@ void loop(void) {
 }
 
 void resetGame(void) {
-  PROGMEMData (&games [selectedGameIndex], currentGame);
+  PROGMEMData (&games[selectedGameIndex], currentGame);
 
-  if (currentGame.stages[0].duration >= 3600) {
+  if (currentGame.stages[0].duration + currentGame.incrementSeconds >= 3600) {
     clockDisplay = clockDisplayHours;
   } else {
     clockDisplay = clockDisplayMinutes;
@@ -304,28 +339,37 @@ void resetGame(void) {
   clockDisplay.setOffColor(backgroundColor);
   printTime(whitesTimeMillis, whitesRotation, 0, false);
   printTime(blacksTimeMillis, blacksRotation, 0, false);
-
+  printClockMode(BLACK);
   paintResetSettingsIcons(foregroundColor);
 
 
 }
 
+void printClockMode(uint16_t color) {
+  printClockMode(whitesRotation, color);
+  printClockMode(blacksRotation, color);
+}
+
+void printClockMode(uint16_t rotation, uint16_t color) {
+  tft.setRotation(rotation);
+  printClockModeName(currentGame, 16, tft.height() - PLAYER_CLOCK_HEIGHT + 7, color);
+  printClockDelay(currentGame, 80, tft.height() - PLAYER_CLOCK_HEIGHT + 7 , color);
+  tft.setCursor(16, tft.height() - PLAYER_CLOCK_HEIGHT + 17);
+  tft.print("STAGES");
+  for (int k = 0; k < currentGame.stagesNumber; k++) {
+    printStageData(currentGame, 60 + k * 60 , tft.height() - PLAYER_CLOCK_HEIGHT + 17, k, BLACK);
+  }
+  tft.setRotation(INITIAL_ROTATION);
+}
 
 void showSettings(void) {
   state = SETTINGS;
   paintSettings();
 }
 
-
-void paintSettingCell(int i, int j) {
-  int cellWidth = tft.width() / settingsCols;
-  int cellHeight = tft.height() / settingsRows;
-
-  int gameIndex = j * settingsCols + i;
-  tft.drawRect(i * cellWidth, j * cellHeight, cellWidth, cellHeight, CYAN);
-  GameType game;
-  PROGMEMData (&games [gameIndex], game);
-  tft.setCursor(i * cellWidth + 2, j * cellHeight + 2);
+void printClockModeName (GameType game, int16_t x, int16_t y, uint16_t color) {
+  tft.setTextColor(color);
+  tft.setCursor(x, y);
   if (game.incrementType == DELAY) {
     tft.print(F("US DELAY") );
   } else if (game.incrementType == BRONSTEIN) {
@@ -337,19 +381,39 @@ void paintSettingCell(int i, int j) {
       tft.print(F("FISCHER") );
     }
   }
-  tft.setCursor(i * cellWidth + 2, j * cellHeight + 2 + 9);
+}
+
+void printClockDelay(GameType game, int16_t x, int16_t y, uint16_t color) {
+  tft.setCursor(x, y);
   if (game.incrementSeconds > 0) {
     tft.print(F("INC ") ); tft.print(game.incrementSeconds); tft.print(F("s") );
   }
+}
+
+void printStageData(GameType game, int16_t x, int16_t y, int k, uint16_t color) {
+  tft.setCursor(x, y);
+  tft.print(game.stages[k].duration / 60  );
+  tft.print(F("m" ));
+  if (game.stages[k].moves > 0) {
+    tft.print(F("/" ));
+    tft.print(game.stages[k].moves);
+    tft.print(F("mv" ));
+  }
+}
+
+void paintSettingCell(int i, int j) {
+  int cellWidth = tft.width() / settingsCols;
+  int cellHeight = tft.height() / settingsRows;
+
+  int gameIndex = j * settingsCols + i;
+  tft.drawRect(i * cellWidth, j * cellHeight, cellWidth, cellHeight, CYAN);
+  GameType game;
+  PROGMEMData (&games [gameIndex], game);
+  printClockModeName(game, i * cellWidth + 2, j * cellHeight + 2, WHITE);
+  printClockDelay(game, i * cellWidth + 2, j * cellHeight + 2 + 9, WHITE);
+
   for (int k = 0; k < game.stagesNumber; k++) {
-    tft.setCursor(i * cellWidth + 2, j * cellHeight + 2 + 18 + 9 * k);
-    tft.print(game.stages[k].duration / 60  );
-    tft.print(F("m" ));
-    if (game.stages[k].moves > 0) {
-      tft.print(F("/" ));
-      tft.print(game.stages[k].moves);
-      tft.print(F("mv" ));
-    }
+    printStageData(game, i * cellWidth + 2, j * cellHeight + 2 + 18 + 9 * k, k, WHITE);
   }
 }
 
@@ -461,13 +525,13 @@ void changeSettingsSelectionTo(int newSelectedGameIndex) {
   tft.setRotation(INITIAL_ROTATION);
   int cellWidth = tft.width() / settingsCols;
   int cellHeight = tft.height() / settingsRows;
-  
+
   tft.fillRect(selectedGameIndex % settingsCols * cellWidth, selectedGameIndex / settingsCols * cellHeight, cellWidth, cellHeight, backgroundColor);
   paintSettingCell(selectedGameIndex % settingsCols, selectedGameIndex / settingsCols);
-  
+
   tft.fillRect(newSelectedGameIndex % settingsCols * cellWidth, newSelectedGameIndex / settingsCols * cellHeight, cellWidth, cellHeight, BLACK);
   paintSettingCell(newSelectedGameIndex % settingsCols, newSelectedGameIndex / settingsCols);
-  
+
   selectedGameIndex = newSelectedGameIndex;
 }
 
@@ -575,7 +639,18 @@ uint16_t readUiSelection(const int16_t lastSelected ) {
          || (ypos < PLAYER_CLOCK_HEIGHT) && isWhiteDown )) {
       Serial.print(" WHITE PLAYING");
       if (state == WHITE_PLAYING) {
+        if (currentGame.incrementType == BRONSTEIN) {
+          int changeTimeMillis = millis();
+          if ( (changeTimeMillis - blacksTurnInitMillis) < currentGame.incrementSeconds * 1000 ) {
+            blacksTimeMillis -= currentGame.incrementSeconds * 1000 - (changeTimeMillis - blacksTurnInitMillis);
+          }
+        }
+
+
         ++whitesmoves;
+        if (currentGame.incrementType == FISCHER) {
+          whitesTimeMillis += (currentGame.incrementSeconds * 1000);
+        }
       }
       state = BLACK_PLAYING;
 
@@ -586,8 +661,17 @@ uint16_t readUiSelection(const int16_t lastSelected ) {
                (((ypos > PLAYER_CLOCK_HEIGHT) && isWhiteDown )
                 || (ypos < PLAYER_CLOCK_HEIGHT) && !isWhiteDown )) {
       Serial.print(" BLACK PLAYING");
+      if (currentGame.incrementType == BRONSTEIN) {
+        int changeTimeMillis = millis();
+        if ( (changeTimeMillis - whitesTurnInitMillis) < currentGame.incrementSeconds * 1000 ) {
+          whitesTimeMillis -= currentGame.incrementSeconds * 1000 - (changeTimeMillis - whitesTurnInitMillis);
+        }
+      }
       state = WHITE_PLAYING;
       ++blacksmoves;
+      if (currentGame.incrementType == FISCHER) {
+        blacksTimeMillis += (currentGame.incrementSeconds * 1000);
+      }
       whitesTurnInitMillis = millis();
       isNewTurn = true;
 
