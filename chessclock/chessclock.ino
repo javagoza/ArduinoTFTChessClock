@@ -224,6 +224,16 @@ void setup(void) {
   resetGame();
 }
 
+void loop(void) {
+  readUiSelection();
+  if (state == WHITE_PLAYING) {
+    whiteClockLoop();
+  } else if (state == BLACK_PLAYING) {
+    blackClockLoop();
+  }
+}
+
+
 
 void whiteClockLoop() {
   if (isNewTurn && (currentGame.incrementType == DELAY)
@@ -288,20 +298,7 @@ void blackClockLoop() {
   }
 }
 
-void loop(void) {
 
-  readUiSelection(0);
-  unsigned long currentMillis = millis();
-  if (state == IDLE) {
-  } else if (state == WHITE_PLAYING) {
-    whiteClockLoop();
-  } else if (state == BLACK_PLAYING) {
-    blackClockLoop();
-  } else if (state == WHITE_IN_PAUSE) {
-  } else if (state == BLACK_IN_PAUSE) {
-  }
-
-}
 
 void resetGame(void) {
   PROGMEMData (&games[selectedGameIndex], currentGame);
@@ -344,11 +341,11 @@ void printClockMode(uint16_t color) {
   printClockMode(blacksRotation, color);
 }
 
-void printStages(int16_t x, int16_t y, uint16_t color){
+void printStages(int16_t x, int16_t y, uint16_t color) {
   tft.setCursor(x, y);
   tft.print("STG");
   for (int k = 0; k < currentGame.stagesNumber; k++) {
-    printStageData(currentGame, x+20 + k * 60 ,y, k, color);
+    printStageData(currentGame, x + 20 + k * 60 , y, k, color);
   }
 }
 
@@ -534,7 +531,7 @@ void changeSettingsSelectionTo(int newSelectedGameIndex) {
 }
 
 
-uint16_t readUiSelection(const int16_t lastSelected ) {
+uint16_t readUiSelection() {
   tft.setRotation(INITIAL_ROTATION);
   int16_t xpos, ypos;  //screen coordinates
   TSPoint tp = ts.getPoint();   //tp.x, tp.y are ADC values
@@ -674,7 +671,7 @@ uint16_t readUiSelection(const int16_t lastSelected ) {
           blacksTimeMillis -=   (currentGame.incrementSeconds * 1000 - timeExpendedMillis) ;
         }
       }
-      
+
       whitesTurnInitMillis = millis();
       whitesEllapsedTimeMillis = millis();
       isNewTurn = true;
