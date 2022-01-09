@@ -107,7 +107,7 @@ enum Buttons {SETTINGS_BUTTON = 0, PAUSE_BUTTON, RESET_BUTON, BOTTOM_BUTTON, UPP
 enum States {IDLE = 0, SETTINGS, WHITE_PLAYING, BLACK_PLAYING, WHITE_IN_PAUSE, BLACK_IN_PAUSE, END_GAME};
 States state = IDLE;
 
-enum IncrementType { DELAY = 0, // Delay the playeer's clock starts after the delay period
+enum IncrementType { DELAY = 0, // Delay the player's clock starts after the delay period
                      BRONSTEIN, // Players receive the used portion of the increment at the end of each turn
                      FISCHER    // Players receive the full increment at the end of each turn, with increment 0 is BLIZT or GUILLOTINE
                    };
