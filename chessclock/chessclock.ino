@@ -113,12 +113,6 @@ enum IncrementType { DELAY = 0, // Delay the playeer's clock starts after the de
                      FISCHER    // Players receive the full increment at the end of each turn, with increment 0 is BLIZT or GUILLOTINE
                    };
 
-
-
-IncrementType incrementType = FISCHER;
-uint16_t incrementSeconds = 0;
-uint16_t stagesNumber = 1;
-int selectedGame = 11;
 struct StageType {
   long duration;
   int moves;
@@ -152,13 +146,17 @@ static const GameType games[24]  PROGMEM = {
   { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
   { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
   { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 2, {{7200, 40}, {1800, 0}, {0, 0}}},
+  { FISCHER, 2, 3, {{60, 10}, {60, 5}, {10, 0}}},
   { FISCHER, 0, 2, {{7200, 40}, {3600, 0}, {0, 0}}},
-  { FISCHER, 0, 3, {{7200, 40}, {3600, 20}, {1800, 0}}},
-  { FISCHER, 0, 3, {{7200, 40}, {3600, 20}, {3600, 0}}}
+  { FISCHER, 2, 3, {{7200, 40}, {3600, 20}, {1800, 0}}},
+  { BRONSTEIN, 2, 3, {{7200, 40}, {3600, 20}, {3600, 0}}}
 };
 
 int selectedGameIndex = 0 ;
+int currentStageBlacks = 0;
+int currentStageWhites = 0;
+int whitesStageMoves = 0;
+int blacksStageMoves = 0;
 GameType currentGame;
 
 const int settingsRows = 6;
@@ -204,8 +202,8 @@ uint16_t pauseColor = tft.color565(30, 30, 30);
 uint16_t alertColor = RED;
 
 // Clock displays
-TFTSevenSegmentClockDisplay clockDisplayMinutes(&tft, 30, 220, 35, 70, WHITE, backgroundColor, 8, false, .75); // Short games
-TFTSevenSegmentClockDisplay clockDisplayHours(&tft, 10, 220, 26, 60, WHITE, backgroundColor, 6, true, .75); // Long games
+TFTSevenSegmentClockDisplay clockDisplayMinutes(&tft, 30, 215, 35, 70, WHITE, backgroundColor, 8, false, .75); // Short games
+TFTSevenSegmentClockDisplay clockDisplayHours(&tft, 10, 215, 26, 60, WHITE, backgroundColor, 6, true, .75); // Long games
 
 // Moves counter display
 TFTSevenSegmentDecimalDisplay movesDisplay(&tft, 180, 290, 5, 8, foregroundColor, backgroundColor, 1);
@@ -262,8 +260,19 @@ void whiteClockLoop() {
       isNewTurn = false;
     }
   } else {
-    state = END_GAME;
-    printTime(0, whitesRotation, whitesmoves, true);
+    if (currentGame.stagesNumber > 1 && currentStageWhites < 2 ) {
+      if ( whitesStageMoves > currentGame.stages[currentStageWhites].moves) {
+        whitesStageMoves = 0;
+        ++currentStageWhites;
+        whitesTimeMillis = currentGame.stages[currentStageWhites].duration * 1000;
+      } else {
+        state = END_GAME;
+        printTime(0, blacksRotation, blacksmoves, true);
+      }
+    } else {
+      state = END_GAME;
+      printTime(0, whitesRotation, whitesmoves, true);
+    }
   }
 }
 
@@ -294,8 +303,19 @@ void blackClockLoop() {
       isNewTurn = false;
     }
   } else {
-    state = END_GAME;
-    printTime(0, blacksRotation, blacksmoves, true);
+    if (currentGame.stagesNumber > 1 && currentStageBlacks < 2 ) {
+      if (blacksStageMoves > currentGame.stages[currentStageBlacks].moves) {
+        blacksStageMoves = 0;
+        ++currentStageBlacks;
+        blacksTimeMillis = currentGame.stages[currentStageBlacks].duration * 1000;
+      } else {
+        state = END_GAME;
+        printTime(0, blacksRotation, blacksmoves, true);
+      }
+    } else {
+      state = END_GAME;
+      printTime(0, blacksRotation, blacksmoves, true);
+    }
   }
 }
 
@@ -311,6 +331,12 @@ void resetGame(void) {
   }
   whitesmoves = 0;
   blacksmoves = 0;
+  whitesStageMoves = 0;
+  blacksStageMoves = 0;
+
+  currentStageWhites = 0;
+  currentStageBlacks = 0;
+
   Serial.println("RESET");
   state = IDLE;
   tft.fillScreen(backgroundColor);
@@ -338,23 +364,24 @@ void resetGame(void) {
 }
 
 void printClockMode(uint16_t color) {
-  printClockMode(whitesRotation, color);
-  printClockMode(blacksRotation, color);
+  printClockMode(whitesRotation, color, state == WHITE_PLAYING, currentStageWhites);
+  printClockMode(blacksRotation, color, state == BLACK_PLAYING, currentStageBlacks);
 }
 
-void printStages(int16_t x, int16_t y, uint16_t color) {
+void printStages(int16_t x, int16_t y, uint16_t color, bool showSelected, int stageSelected) {
   tft.setCursor(x, y);
   tft.print("STG");
   for (int k = 0; k < currentGame.stagesNumber; k++) {
-    printStageData(currentGame, x + 20 + k * 60 , y, k, color);
+    printStageData(currentGame, x + 26 + k * 60 , y, k, (k == stageSelected && showSelected) ? foregroundColor : color);
   }
+  tft.setTextColor(color);
 }
 
-void printClockMode(uint16_t rotation, uint16_t color) {
+void printClockMode(uint16_t rotation, uint16_t color, bool showSelected, int stageSelected) {
   tft.setRotation(rotation);
   printClockModeName(currentGame, 16, tft.height() - PLAYER_CLOCK_HEIGHT + 8, color);
   printClockDelay(currentGame, 80, tft.height() - PLAYER_CLOCK_HEIGHT + 8 , color);
-  printStages(16, tft.height() - 27, color);
+  printStages(16, tft.height() - 27, color, showSelected, stageSelected);
   tft.setRotation(INITIAL_ROTATION);
 }
 
@@ -388,8 +415,14 @@ void printClockDelay(GameType game, int16_t x, int16_t y, uint16_t color) {
 
 void printStageData(GameType game, int16_t x, int16_t y, int k, uint16_t color) {
   tft.setCursor(x, y);
-  tft.print(game.stages[k].duration / 60  );
-  tft.print(F("m" ));
+  tft.setTextColor(color);
+  if (game.stages[k].duration / 60 > 0) {
+    tft.print(game.stages[k].duration / 60  );
+    tft.print(F("m" ));
+  } else {
+    tft.print(game.stages[k].duration   );
+    tft.print(F("s" ));
+  }
   if (game.stages[k].moves > 0) {
     tft.print(F("/" ));
     tft.print(game.stages[k].moves);
@@ -488,6 +521,7 @@ void printTime(const long newTime, const int rotation, uint16_t moves, const boo
       drawRect(5 , (int) tft.height() - PLAYER_CLOCK_HEIGHT, tft.width() - 10, PLAYER_CLOCK_HEIGHT - 10, alertColor, 5);
       clockDisplay.setOnColor( alertColor);
       movesDisplay.setOnColor(alertColor);
+
     } else {
       drawRect(5 , (int) tft.height() - PLAYER_CLOCK_HEIGHT, tft.width() - 10, PLAYER_CLOCK_HEIGHT - 10, tft.color565(255, 255, 0), 5);
       clockDisplay.setOnColor(foregroundColor);
@@ -500,6 +534,7 @@ void printTime(const long newTime, const int rotation, uint16_t moves, const boo
   }
   clockDisplay.displayMillis(newTime, toggleSeparator || !selected);
   movesDisplay.display(moves);
+  printClockMode(BLACK);
   tft.setRotation(INITIAL_ROTATION);
 }
 
@@ -514,6 +549,7 @@ void printPauseTime(const long newTime, const int rotation, uint16_t moves) {
 
   clockDisplay.displayMillis(newTime, true);
   movesDisplay.display(moves);
+  printClockMode(BLACK);
   tft.setRotation(INITIAL_ROTATION);
 }
 
@@ -628,6 +664,7 @@ uint16_t readUiSelection() {
       }
       paintPawnsIcons();
       paintPauseIcon(foregroundColor);
+      paintResetSettingsIcons(backgroundColor);
       isNewTurn = true;
 
       whitesTurnInitMillis = millis();
@@ -640,6 +677,8 @@ uint16_t readUiSelection() {
          || (ypos < PLAYER_CLOCK_HEIGHT) && isWhiteDown )) {
 
       ++whitesmoves;
+      ++whitesStageMoves;
+
       if (currentGame.incrementType == BRONSTEIN) {
         unsigned long changeTimeMillis = millis();
         unsigned long timeExpendedMillis = changeTimeMillis - whitesTurnInitMillis;
@@ -665,6 +704,7 @@ uint16_t readUiSelection() {
         whitesTimeMillis += (currentGame.incrementSeconds * 1000);
       }
       ++blacksmoves;
+      ++blacksStageMoves;
       if (currentGame.incrementType == BRONSTEIN) {
         unsigned long changeTimeMillis = millis();
         unsigned long timeExpendedMillis = changeTimeMillis - blacksTurnInitMillis;
@@ -679,5 +719,5 @@ uint16_t readUiSelection() {
     }
 
   }
-  return -1;
+  return state;
 }
