@@ -645,7 +645,7 @@ uint16_t readUiSelection() {
 
     if (state == IDLE) {
       printClockMode(BLACK);
-      if (currentGame.incrementType == FISCHER || currentGame.incrementType == BRONSTEIN) {
+      if (currentGame.incrementType == BRONSTEIN) {
         whitesTimeMillis += (currentGame.incrementSeconds * 1000);
       }
       state = WHITE_PLAYING;
@@ -687,8 +687,11 @@ uint16_t readUiSelection() {
       }
 
       state = BLACK_PLAYING;
-      if (currentGame.incrementType == FISCHER || currentGame.incrementType == BRONSTEIN) {
+      if (currentGame.incrementType == BRONSTEIN) {
         blacksTimeMillis += (currentGame.incrementSeconds * 1000);
+      }
+      if (currentGame.incrementType == FISCHER) {
+        whitesTimeMillis += (currentGame.incrementSeconds * 1000);
       }
       blacksTurnInitMillis = millis();
       blacksEllapsedTimeMillis = millis();
@@ -699,8 +702,11 @@ uint16_t readUiSelection() {
                 || (ypos < PLAYER_CLOCK_HEIGHT) && !isWhiteDown )) {
 
       state = WHITE_PLAYING;
-      if (currentGame.incrementType == FISCHER || currentGame.incrementType == BRONSTEIN) {
+      if (currentGame.incrementType == BRONSTEIN) {
         whitesTimeMillis += (currentGame.incrementSeconds * 1000);
+      }
+      if (currentGame.incrementType == FISCHER) {
+        blacksTimeMillis += (currentGame.incrementSeconds * 1000);
       }
       ++blacksmoves;
       ++blacksStageMoves;
