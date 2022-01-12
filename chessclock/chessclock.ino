@@ -125,32 +125,31 @@ struct GameType {
 };
 
 static const GameType games[24]  PROGMEM = {
-  { FISCHER, 0, 1, {{ 180, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{ 300, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{ 600, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{1500, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{3600, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{7200, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{ 180, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{ 300, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 1, {{ 600, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 2, 1, {{1500, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 2, 1, {{3600, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 2, 1, {{7200, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { BRONSTEIN, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { DELAY, 2, 1, {{180, 0}, {0, 0}, {0, 0}}},
-  { FISCHER, 0, 3, {{10, 5}, {5, 3}, {0, 0}}},
-  { FISCHER, 2, 3, {{60, 10}, {60, 5}, {10, 0}}},
-  { FISCHER, 0, 2, {{7200, 40}, {3600, 0}, {0, 0}}},
-  { FISCHER, 2, 3, {{7200, 40}, {3600, 20}, {1800, 0}}},
-  { BRONSTEIN, 2, 3, {{7200, 40}, {3600, 20}, {3600, 0}}}
+  { FISCHER, 0, 1, {{ 300, 0}, {0,  0}, {0, 0}}},         // 01 Time blitz 5 min
+  { FISCHER, 0, 1, {{1500, 0}, {0,  0}, {0, 0}}},         // 02 Time rapid 25 min
+  { FISCHER, 0, 1, {{ 180, 0}, {0,  0}, {0, 0}}},         // 03 Time blitz 3 min
+  { FISCHER, 0, 2, {{7200,40}, {1800, 0}, {0, 0}}},       // 04 Time + guillotine 2 hrs f.b. 30 min
+  { FISCHER, 0, 2, {{3600,40}, {1800, 0}, {0, 0}}},       // 05 Time + guillotine  1 hrs f.b. 30 min
+  { FISCHER, 0, 3, {{7200, 40}, {3600, 20}, {1800, 0}}},  // 06 2 x Time + guillotine 2 hrs f.b. 1 hr f.b. 30 min
+  { FISCHER, 0, 3, {{7200, 40}, {7200, 20}, {1800, 0}}},  // 07 Time + repeating 2nd period 2 hours f.b. 1 hour (repeating)
+  { FISCHER, 10, 2, {{1500,40}, {300, 20}, {0, 0}}},      // 08 Time + Bonus (“Fischer”) 25 min f.b. 5 min + 10 sec./move
+  { FISCHER, 30, 2, {{7200, 40}, {900, 0}, {0, 0}}},      // 09 Time + Bonus (“Fischer”) 2 hrs f.b. 15 min + 30 sec./move
+  { FISCHER, 30, 3, {{7200, 40}, {7200, 20}, {900, 0}}},  // 10 2 x Time + Bonus (“Fischer”) 2 hrs, f.b. 1 hr f.b. 15 min + 30 sec./move
+  { FISCHER, 30, 3, {{3600, 40}, {3600, 20}, {900, 0}}},  // 11 2 x Time + Bonus (“Fischer”) 1 hrs, f.b. 30 hr f.b. 15 min + 30 sec./move 
+  { FISCHER, 2, 1,  {{180, 0}, {0, 0}, {0, 0}}},          // 12 Bonus (“Fischer”) blitz 3 min + 2 sec/move
+  { FISCHER, 10, 1, {{1500, 0}, {0, 0}, {0, 0}}},         // 13 Bonus (“Fischer”) rapid 25 min + 10 sec/move
+  { FISCHER, 30, 1, {{180, 0}, {0, 0}, {0, 0}}},          // 14 Bonus (“Fischer”) slow 90 min + 30 sec/move
+  { FISCHER, 30, 2, {{5400, 40}, {900, 0}, {0, 0}}},      // 15 Bonus tournament 90 min f.b. 15 min (all + 30sec./move)
+  { FISCHER, 30, 2,    {{6000, 40}, {1800, 0}, {0, 0}}},  // 16 Bonus tournament 100 min f.b. 30 min (all + 30sec./move)
+  { BRONSTEIN, 3, 1, {{300, 0}, {0, 0}, {0, 0}}},         // 17 Delay (“Bronstein”) 5 min + 3 sec./move free
+  { BRONSTEIN, 10, 1, {{1500, 0}, {0, 0}, {0, 0}}},       // 18 Delay (“Bronstein”) 25 min + 10 sec./move free
+  { BRONSTEIN, 5, 2, {{7200, 0}, {0, 0}, {0, 0}}},        // 19 Delay (“Bronstein”) 1 hr 55 min 5 sec/move free
+  { DELAY, 3, 1, {{300, 0}, {0, 0}, {0, 0}}},             // 20 Delay (“US DELAY”) 5 min + 3 sec./move free
+  { DELAY, 10, 1, {{1500, 0}, {0, 0}, {0, 0}}},           // 21 Delay (“US DELAY”) 25 min + 10 sec./move free
+  { DELAY, 10, 1, {{1500, 0}, {0, 0}, {0, 0}}},           // 22 Delay (“US DELAY”) rapid 25 min + 10 sec/move
+  { DELAY, 30, 1, {{180, 0}, {0, 0}, {0, 0}}},            // 23 Delay (“US DELAY”) slow 90 min + 30 sec/move
+  { DELAY, 30, 2, {{5400, 40}, {900, 0}, {0, 0}}},        // 24 Delay (“US DELAY”) tournament 90 min f.b. 15 min (all + 30sec./move)
 };
-
 int selectedGameIndex = 0 ;
 int currentStageBlacks = 0;
 int currentStageWhites = 0;
@@ -398,7 +397,7 @@ void printClockModeName (GameType game, int16_t x, int16_t y, uint16_t color) {
     tft.print(F("BRONSTEIN") );
   } else if (game.incrementType == FISCHER) {
     if (game.incrementSeconds == 0) {
-      tft.print(F("NO INC") );
+      tft.print(F("TIME") );
     } else {
       tft.print(F("FISCHER") );
     }
